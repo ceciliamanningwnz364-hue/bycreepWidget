@@ -1,0 +1,43 @@
+name: Build bycreep IPA
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build-ipa:
+    runs-on: macos-14
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode Project
+        run: xcodegen generate
+
+      - name: Build Unsigned iOS App & Widget
+        run: |
+          xcodebuild clean build \
+            -project bycreep.xcodeproj \
+            -scheme bycreep \
+            -sdk iphoneos \
+            -configuration Release \
+            -derivedDataPath build \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Package into .ipa
+        run: |
+          mkdir -p Payload
+          cp -r build/Build/Products/Release-iphoneos/bycreep.app Payload/
+          zip -r9 bycreep.ipa Payload
+
+      - name: Upload bycreep.ipa Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bycreep-IPA
+          path: bycreep.ipa
